@@ -91,13 +91,10 @@ class PluginCache(object):
         return name in self._list_of_global_aliases
 
     def get_plugin_config(self, plugin_name, generic_name=None):
-        config = obj_dict(not_in_dict=['name'])
-        config.name = plugin_name
-
         # Load plugin defaults
-        cfg_points = self.get_plugin_parameters(plugin_name)
-        for cfg_point in cfg_points.itervalues():
-            cfg_point.set_value(config, check_mandatory=False)
+        config = obj_dict(not_in_dict=['name'],
+                          values=self.loader.get_default_config(plugin_name))
+        config.name = plugin_name
 
         # Merge global aliases
         for alias, param in self._global_alias_map[plugin_name].iteritems():
@@ -109,6 +106,7 @@ class PluginCache(object):
 
         # Merge user config
         # Perform a simple merge with the order of sources representing priority
+        cfg_points = self.get_plugin_parameters(plugin_name)
         if generic_name is None:
             plugin_config = self.plugin_configs[plugin_name]
             for source in self.sources:

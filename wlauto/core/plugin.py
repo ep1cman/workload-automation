@@ -614,7 +614,9 @@ class PluginLoader(object):
         """
         real_name, alias_config = self.resolve_alias(name)
         base_default_config = self.get_plugin_class(real_name).get_default_config()
-        return merge_dicts_simple(base_default_config, alias_config)
+        for key, value in alias_config.iteritems():
+            base_default_config[key] = value
+        return base_default_config
 
     def list_plugins(self, kind=None):
         """

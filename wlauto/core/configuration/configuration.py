@@ -593,12 +593,6 @@ class WAConfiguration(Configuration):
             """,
         ),
         ConfigurationPoint(
-            'assets_repository',
-            description="""
-            The local mount point for the filer hosting WA assets.
-            """,
-        ),
-        ConfigurationPoint(
             'logging',
             kind=LoggingConfig,
             default=LoggingConfig.defaults,

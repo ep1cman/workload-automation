@@ -361,8 +361,8 @@ class ConfigurationTest(TestCase):
 
 class PluginCacheTest(TestCase):
 
-    param1 = ConfigurationPoint("param1", aliases="test_global_alias")
-    param2 = ConfigurationPoint("param2", aliases="some_other_alias")
+    param1 = ConfigurationPoint("param1", global_alias="test_global_alias")
+    param2 = ConfigurationPoint("param2", global_alias="some_other_alias")
     param3 = ConfigurationPoint("param3")
 
     plugin1 = obj_dict(values={
@@ -426,11 +426,11 @@ class PluginCacheTest(TestCase):
         # Check the alias map
         expected_map = {
             "plugin 1": {
-                self.param1.aliases: self.param1,
-                self.param2.aliases: self.param2,
+                self.param1.global_alias: self.param1,
+                self.param2.global_alias: self.param2,
             },
             "plugin 2": {
-                self.param1.aliases: self.param1,
+                self.param1.global_alias: self.param1,
             }
         }
         expected_set = set(["test_global_alias", "some_other_alias"])

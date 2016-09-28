@@ -11,7 +11,6 @@ from wlauto.core.configuration.tree import SectionNode
 from wlauto.core.configuration.configuration import (ConfigurationPoint,
                                                      Configuration,
                                                      RunConfiguration,
-                                                     merge_using_priority_specificity,
                                                      get_type_name)
 from wlauto.core.configuration.plugin_cache import PluginCache, GENERIC_CONFIGS
 from wlauto.utils.types import obj_dict
@@ -32,24 +31,12 @@ c4 = b2.add_section({"id": "C4"})
 d1 = c2.add_section({"id": "D1"})
 
 DEFAULT_PLUGIN_CONFIG = {
-    "device_config": {
-        "a": {
-            "test3": ["there"],
-            "test5": [5, 4, 3],
-        },
-        "b": {
-            "test4": 1234,
-        },
-    },
     "some_device": {
-        "a": {
-            "test3": ["how are"],
-            "test2": "MANDATORY",
-        },
-        "b": {
-            "test3": ["you?"],
-            "test5": [1, 2, 3],
-        }
+        "test1": "hello",
+        "test2": "MANDATORY",
+        "test3": ["hello", "there", "how are", "you?"],
+        "test4": 1234,
+        "test5": [1, 2, 3],
     }
 }
 
@@ -61,7 +48,7 @@ def _construct_mock_plugin_cache(values=None):
     plugin_cache = Mock(spec=PluginCache)
     plugin_cache.sources = ["a", "b", "c", "d", "e"]
 
-    def get_plugin_config(plugin_name):
+    def get_plugin_config(plugin_name, generic_name=None):
         return values[plugin_name]
     plugin_cache.get_plugin_config.side_effect = get_plugin_config
 
@@ -261,90 +248,6 @@ class TestConfiguration(Configuration):
 
 class ConfigurationTest(TestCase):
 
-    def test_merge_using_priority_specificity(self):
-        # Test good configs
-        plugin_cache = _construct_mock_plugin_cache()
-        expected_result = {
-            "test1": "hello",
-            "test2": "MANDATORY",
-            "test3": ["hello", "there", "how are", "you?"],
-            "test4": 1234,
-            "test5": [1, 2, 3],
-        }
-        result = merge_using_priority_specificity("device_config", "some_device", plugin_cache)
-        assert_equal(result, expected_result)
-
-        # Test missing mandatory parameter
-        plugin_cache = _construct_mock_plugin_cache(values={
-            "device_config": {
-                "a": {
-                    "test1": "abc",
-                },
-            },
-            "some_device": {
-                "b": {
-                    "test5": [1, 2, 3],
-                }
-            }
-        })
-        msg = 'No value specified for mandatory parameter "test2" in some_device.'
-        with self.assertRaisesRegexp(ConfigError, msg):
-            merge_using_priority_specificity("device_config", "some_device", plugin_cache)
-
-        # Test conflict
-        plugin_cache = _construct_mock_plugin_cache(values={
-            "device_config": {
-                "e": {
-                    'test2': "NOT_CONFLICTING"
-                }
-            },
-            "some_device": {
-                'a': {
-                    'test2': "CONFLICT1"
-                },
-                'b': {
-                    'test2': "CONFLICT2"
-                },
-                'c': {
-                    'test2': "CONFLICT3"
-                },
-            },
-        })
-        msg = ('Error in "e":\n'
-               '\t"device_config" configuration "test2" has already been specified more specifically for some_device in:\n'
-               '\t\ta\n'
-               '\t\tb\n'
-               '\t\tc')
-        with self.assertRaisesRegexp(ConfigError, msg):
-            merge_using_priority_specificity("device_config", "some_device", plugin_cache)
-
-        # Test invalid entries
-        plugin_cache = _construct_mock_plugin_cache(values={
-            "device_config": {
-                "a": {
-                    "NOT_A_CFG_POINT": "nope"
-                }
-            },
-            "some_device": {}
-        })
-        msg = ('Error in "a":\n\t'
-               'Invalid entry\(ies\) for "some_device" in "device_config": "NOT_A_CFG_POINT"')
-        with self.assertRaisesRegexp(ConfigError, msg):
-            merge_using_priority_specificity("device_config", "some_device", plugin_cache)
-
-        plugin_cache = _construct_mock_plugin_cache(values={
-            "some_device": {
-                "a": {
-                    "NOT_A_CFG_POINT": "nope"
-                }
-            },
-            "device_config": {}
-        })
-        msg = ('Error in "a":\n\t'
-               'Invalid entry\(ies\) for "some_device": "NOT_A_CFG_POINT"')
-        with self.assertRaisesRegexp(ConfigError, msg):
-            merge_using_priority_specificity("device_config", "some_device", plugin_cache)
-
     # pylint: disable=no-member
     def test_configuration(self):
         # Test loading defaults
@@ -486,11 +389,25 @@ class PluginCacheTest(TestCase):
     def has_plugin(self, name):
         return name in ["plugin 1", "plugin 2"]
 
+    def get_default_config(self, name):
+        output = {}
+        if name == "plugin 1":
+            plug = self.plugin1
+        elif name == "plugin 2":
+            plug = self.plugin2
+        else:
+            raise RuntimeError()
+
+        for p in plug['parameters']:
+            output[p.name] = p.default
+        return output
+
     def make_mock_cache(self):
         mock_loader = Mock()
         mock_loader.get_plugin_class.side_effect = self.get_plugin
         mock_loader.list_plugins = Mock(return_value=[self.plugin1, self.plugin2])
         mock_loader.has_plugin.side_effect = self.has_plugin
+        mock_loader.get_default_config.side_effect = self.get_default_config
         return PluginCache(loader=mock_loader)
 
     def test_get_params(self):

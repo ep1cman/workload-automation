@@ -75,7 +75,8 @@ POD_TYPES = [
     float,
     bool,
     datetime,
-    regex_type
+    regex_type,
+    type(None),
 ]
 
 class WAJSONEncoder(_json.JSONEncoder):
@@ -256,4 +257,4 @@ def _read_pod(fh, fmt=None):
 
 
 def is_pod(obj):
-    return type(obj) in POD_TYPES
+    return any(isinstance(obj, t) for t in POD_TYPES)

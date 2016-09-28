@@ -25,7 +25,7 @@ from nose.tools import assert_equal, assert_raises, raises
 
 from wlauto.core.execution import BySpecRunner, ByIterationRunner
 from wlauto.exceptions import DeviceError
-from wlauto.core.configuration import WorkloadRunSpec, RebootPolicy
+from wlauto.core.configuration import core_config, WorkloadRunSpec, RebootPolicy
 from wlauto.core.instrumentation import Instrument
 from wlauto.core.device import Device, DeviceMeta
 from wlauto.core import instrumentation, signal

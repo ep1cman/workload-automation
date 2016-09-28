@@ -21,7 +21,7 @@ import threading
 
 import colorama
 
-from wlauto.core.configuration import settings
+from wlauto.core.configuration.configuration import core_config
 import wlauto.core.signal as signal
 
 
@@ -46,16 +46,16 @@ def init_logging(verbosity):
     console_handler = logging.StreamHandler()
     if verbosity == 1:
         console_handler.setLevel(logging.DEBUG)
-        if 'colour' in settings.logging and not settings.logging['colour']:
-            console_handler.setFormatter(LineFormatter(settings.logging['verbose_format']))
+        if 'colour' in core_config.logging and not core_config.logging['colour']:
+            console_handler.setFormatter(LineFormatter(logging['verbose_format']))
         else:
-            console_handler.setFormatter(ColorFormatter(settings.logging['verbose_format']))
+            console_handler.setFormatter(ColorFormatter(core_config.logging['verbose_format']))
     else:
         console_handler.setLevel(logging.INFO)
-        if 'colour' in settings.logging and not settings.logging['colour']:
-            console_handler.setFormatter(LineFormatter(settings.logging['regular_format']))
+        if 'colour' in core_config.logging and not core_config.logging['colour']:
+            console_handler.setFormatter(LineFormatter(core_config.logging['regular_format']))
         else:
-            console_handler.setFormatter(ColorFormatter(settings.logging['regular_format']))
+            console_handler.setFormatter(ColorFormatter(core_config.logging['regular_format']))
     root_logger.addHandler(console_handler)
 
     logging.basicConfig(level=logging.DEBUG)
@@ -65,7 +65,7 @@ def add_log_file(filepath, level=logging.DEBUG):
     root_logger = logging.getLogger()
     file_handler = logging.FileHandler(filepath)
     file_handler.setLevel(level)
-    file_handler.setFormatter(LineFormatter(settings.logging['file_format']))
+    file_handler.setFormatter(LineFormatter(core_config.logging['file_format']))
     root_logger.addHandler(file_handler)
 
 

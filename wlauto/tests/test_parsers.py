@@ -8,7 +8,7 @@ from mock.mock import Mock, MagicMock, call
 from wlauto.exceptions import ConfigError
 from wlauto.core.configuration.parsers import *  # pylint: disable=wildcard-import
 from wlauto.core.configuration.parsers import _load_file, _collect_valid_id, _resolve_params_alias
-from wlauto.core.configuration import (WAConfiguration, RunConfiguration, JobGenerator,
+from wlauto.core.configuration import (CoreConfiguration, RunConfiguration, JobGenerator,
                                        PluginCache, ConfigurationPoint)
 from wlauto.utils.types import toggle_set, reset_counter
 
@@ -132,11 +132,11 @@ class TestFunctions(TestCase):
 class TestConfigParser(TestCase):
 
     def test_error_cases(self):
-        wa_config = Mock(spec=WAConfiguration)
-        wa_config.configuration = WAConfiguration.configuration
+        core_config = Mock(spec=CoreConfiguration)
+        core_config.configuration = CoreConfiguration.configuration
         run_config = Mock(spec=RunConfiguration)
         run_config.configuration = RunConfiguration.configuration
-        config_parser = ConfigParser(wa_config,
+        config_parser = ConfigParser(core_config,
                                      run_config,
                                      Mock(spec=JobGenerator),
                                      Mock(spec=PluginCache))
@@ -158,15 +158,15 @@ class TestConfigParser(TestCase):
                                "Unit test")
 
     def test_config_points(self):
-        wa_config = Mock(spec=WAConfiguration)
-        wa_config.configuration = WAConfiguration.configuration
+        core_config = Mock(spec=CoreConfiguration)
+        core_config.configuration = CoreConfiguration.configuration
 
         run_config = Mock(spec=RunConfiguration)
         run_config.configuration = RunConfiguration.configuration
 
         jobs_config = Mock(spec=JobGenerator)
         plugin_cache = Mock(spec=PluginCache)
-        config_parser = ConfigParser(wa_config, run_config, jobs_config, plugin_cache)
+        config_parser = ConfigParser(core_config, run_config, jobs_config, plugin_cache)
 
         cfg = {
             "assets_repository": "/somewhere/",
@@ -177,7 +177,7 @@ class TestConfigParser(TestCase):
             "workload_name": "name"
         }
         config_parser.load(cfg, "Unit test")
-        wa_config.set.assert_has_calls([
+        core_config.set.assert_has_calls([
             call("assets_repository", "/somewhere/"),
             call("logging", "verbose")
         ], any_order=True)
@@ -206,7 +206,7 @@ class TestConfigParser(TestCase):
         jobs_config.reset_mock()
         config_parser.load({}, "Unit test")
         jobs_config.set_global_value.assert_has_calls([], any_order=True)
-        wa_config.set.assert_has_calls([], any_order=True)
+        core_config.set.assert_has_calls([], any_order=True)
         run_config.set.assert_has_calls([], any_order=True)
 
 
@@ -214,13 +214,13 @@ class TestAgendaParser(TestCase):
 
     # Tests Phase 1 & 2
     def test_valid_structures(self):
-        wa_config = Mock(spec=WAConfiguration)
-        wa_config.configuration = WAConfiguration.configuration
+        core_config = Mock(spec=CoreConfiguration)
+        core_config.configuration = CoreConfiguration.configuration
         run_config = Mock(spec=RunConfiguration)
         run_config.configuration = RunConfiguration.configuration
         jobs_config = Mock(spec=JobGenerator)
         plugin_cache = Mock(spec=PluginCache)
-        agenda_parser = AgendaParser(wa_config, run_config, jobs_config, plugin_cache)
+        agenda_parser = AgendaParser(core_config, run_config, jobs_config, plugin_cache)
 
         msg = 'Error in "Unit Test":\n\tInvalid agenda, top level entry must be a dict'
         with self.assertRaisesRegexp(ConfigError, msg):
@@ -244,13 +244,13 @@ class TestAgendaParser(TestCase):
 
     # Test Phase 3
     def test_id_collection(self):
-        wa_config = Mock(spec=WAConfiguration)
-        wa_config.configuration = WAConfiguration.configuration
+        core_config = Mock(spec=CoreConfiguration)
+        core_config.configuration = CoreConfiguration.configuration
         run_config = Mock(spec=RunConfiguration)
         run_config.configuration = RunConfiguration.configuration
         jobs_config = Mock(spec=JobGenerator)
         plugin_cache = Mock(spec=PluginCache)
-        agenda_parser = AgendaParser(wa_config, run_config, jobs_config, plugin_cache)
+        agenda_parser = AgendaParser(core_config, run_config, jobs_config, plugin_cache)
 
         agenda = {
             "workloads": [
@@ -270,13 +270,13 @@ class TestAgendaParser(TestCase):
 
     # Test Phase 4
     def test_id_assignment(self):
-        wa_config = Mock(spec=WAConfiguration)
-        wa_config.configuration = WAConfiguration.configuration
+        core_config = Mock(spec=CoreConfiguration)
+        core_config.configuration = CoreConfiguration.configuration
         run_config = Mock(spec=RunConfiguration)
         run_config.configuration = RunConfiguration.configuration
         jobs_config = Mock(spec=JobGenerator)
         plugin_cache = Mock(spec=PluginCache)
-        agenda_parser = AgendaParser(wa_config, run_config, jobs_config, plugin_cache)
+        agenda_parser = AgendaParser(core_config, run_config, jobs_config, plugin_cache)
 
         # Helper function
         def _assert_ids(ids, expected):
@@ -365,26 +365,26 @@ class TestAgendaParser(TestCase):
 class TestEnvironmentVarsParser(TestCase):
 
     def test_environmentvarsparser(self):
-        wa_config = Mock(spec=WAConfiguration)
+        core_config = Mock(spec=CoreConfiguration)
         calls = [call('user_directory', '/testdir'),
                  call('plugin_paths', ['/test', '/some/other/path', '/testy/mc/test/face'])]
 
         # Valid env vars
         valid_environ = {"WA_USER_DIRECTORY": "/testdir",
                          "WA_PLUGIN_PATHS": "/test:/some/other/path:/testy/mc/test/face"}
-        EnvironmentVarsParser(wa_config, valid_environ)
-        wa_config.set.assert_has_calls(calls)
+        EnvironmentVarsParser(core_config, valid_environ)
+        core_config.set.assert_has_calls(calls)
 
         # Alternative env var name
-        wa_config.reset_mock()
+        core_config.reset_mock()
         alt_valid_environ = {"WA_USER_DIRECTORY": "/testdir",
                              "WA_EXTENSION_PATHS": "/test:/some/other/path:/testy/mc/test/face"}
-        EnvironmentVarsParser(wa_config, alt_valid_environ)
-        wa_config.set.assert_has_calls(calls)
+        EnvironmentVarsParser(core_config, alt_valid_environ)
+        core_config.set.assert_has_calls(calls)
 
         # Test that WA_EXTENSION_PATHS gets merged with WA_PLUGIN_PATHS.
         # Also checks that other enviroment variables don't cause errors
-        wa_config.reset_mock()
+        core_config.reset_mock()
         calls = [call('user_directory', '/testdir'),
                  call('plugin_paths', ['/test', '/some/other/path']),
                  call('plugin_paths', ['/testy/mc/test/face'])]
@@ -392,18 +392,18 @@ class TestEnvironmentVarsParser(TestCase):
                          "WA_PLUGIN_PATHS": "/test:/some/other/path",
                          "WA_EXTENSION_PATHS": "/testy/mc/test/face",
                          "RANDOM_VAR": "random_value"}
-        EnvironmentVarsParser(wa_config, ext_and_plgin)
+        EnvironmentVarsParser(core_config, ext_and_plgin)
         # If any_order=True then the calls can be in any order, but they must all appear
-        wa_config.set.assert_has_calls(calls, any_order=True)
+        core_config.set.assert_has_calls(calls, any_order=True)
 
         # No WA enviroment variables present
-        wa_config.reset_mock()
-        EnvironmentVarsParser(wa_config, {"RANDOM_VAR": "random_value"})
-        wa_config.set.assert_not_called()
+        core_config.reset_mock()
+        EnvironmentVarsParser(core_config, {"RANDOM_VAR": "random_value"})
+        core_config.set.assert_not_called()
 
 
 class TestCommandLineArgsParser(TestCase):
-    wa_config = Mock(spec=WAConfiguration)
+    core_config = Mock(spec=CoreConfiguration)
     run_config = Mock(spec=RunConfiguration)
     jobs_config = Mock(spec=JobGenerator)
 
@@ -414,8 +414,8 @@ class TestCommandLineArgsParser(TestCase):
         only_run_ids=["wk1", "s1_wk4"],
         some_other_setting="value123"
     )
-    CommandLineArgsParser(cmd_args, wa_config, jobs_config)
-    wa_config.set.assert_has_calls([call("verbosity", 1)], any_order=True)
+    CommandLineArgsParser(cmd_args, core_config, jobs_config)
+    core_config.set.assert_has_calls([call("verbosity", 1)], any_order=True)
     jobs_config.disable_instruments.assert_has_calls([
         call(toggle_set(["~abc", "~def", "~ghi"]))
     ], any_order=True)

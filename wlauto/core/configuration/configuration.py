@@ -537,7 +537,7 @@ class Configuration(object):
 
 
 # This configuration for the core WA framework
-class WAConfiguration(Configuration):
+class CoreConfiguration(Configuration):
 
     name = "WA Configuration"
     config_points = [
@@ -1023,4 +1023,4 @@ class JobGenerator(object):
 
                 yield job_spec
 
-settings = WAConfiguration()
+core_config = CoreConfiguration()

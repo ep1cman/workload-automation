@@ -23,7 +23,7 @@ from nose.tools import assert_equal, assert_in, raises
 
 from wlauto.core.bootstrap import ConfigLoader
 from wlauto.core.agenda import AgendaWorkloadEntry, AgendaGlobalEntry, Agenda
-from wlauto.core.configuration import RunConfiguration
+from wlauto.core.configuration import core_config, RunConfiguration
 from wlauto.exceptions import ConfigError
 
 

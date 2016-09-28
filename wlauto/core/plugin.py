@@ -28,7 +28,7 @@ from copy import copy
 from wlauto.exceptions import NotFoundError, LoaderError, ValidationError, ConfigError
 from wlauto.utils.misc import (ensure_directory_exists as _d,
                                walk_modules, load_class, merge_dicts_simple, get_article)
-from wlauto.core.configuration import settings
+from wlauto.core.configuration import core_config
 from wlauto.utils.types import identifier, boolean
 from wlauto.core.configuration.configuration import ConfigurationPoint as Parameter
 

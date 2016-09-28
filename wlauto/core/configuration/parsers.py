@@ -158,8 +158,8 @@ def _process_workload_entry(workload, seen_workload_ids, jobs_config):
 
 class ConfigParser(object):
 
-    def __init__(self, wa_config, run_config, jobs_config, plugin_cache):
-        self.wa_config = wa_config
+    def __init__(self, core_config, run_config, jobs_config, plugin_cache):
+        self.core_config = core_config
         self.run_config = run_config
         self.jobs_config = jobs_config
         self.plugin_cache = plugin_cache
@@ -178,10 +178,10 @@ class ConfigParser(object):
             merge_result_processors_instruments(raw)
 
             # Get WA core configuration
-            for cfg_point in self.wa_config.configuration.itervalues():
+            for cfg_point in self.core_config.configuration.itervalues():
                 value = get_aliased_param(cfg_point, raw)
                 if value is not None:
-                    self.wa_config.set(cfg_point.name, value)
+                    self.core_config.set(cfg_point.name, value)
 
             # Get run specific configuration
             for cfg_point in self.run_config.configuration.itervalues():
@@ -209,8 +209,8 @@ class ConfigParser(object):
 
 class AgendaParser(object):
 
-    def __init__(self, wa_config, run_config, jobs_config, plugin_cache):
-        self.wa_config = wa_config
+    def __init__(self, core_config, run_config, jobs_config, plugin_cache):
+        self.core_config = core_config
         self.run_config = run_config
         self.jobs_config = jobs_config
         self.plugin_cache = plugin_cache
@@ -231,7 +231,7 @@ class AgendaParser(object):
                     raise ConfigError('Invalid entry "{}" - must be a dict'.format(name))
                 if 'run_name' in entry:
                     self.run_config.set('run_name', entry.pop('run_name'))
-                config_parser = ConfigParser(self.wa_config, self.run_config,
+                config_parser = ConfigParser(self.core_config, self.run_config,
                                              self.jobs_config, self.plugin_cache)
                 config_parser.load(entry, source, wrap_exceptions=False)
 
@@ -284,24 +284,24 @@ class AgendaParser(object):
 
 
 class EnvironmentVarsParser(object):
-    def __init__(self, wa_config, environ):
+    def __init__(self, core_config, environ):
         user_directory = environ.pop('WA_USER_DIRECTORY', '')
         if user_directory:
-            wa_config.set('user_directory', user_directory)
+            core_config.set('user_directory', user_directory)
         plugin_paths = environ.pop('WA_PLUGIN_PATHS', '')
         if plugin_paths:
-            wa_config.set('plugin_paths', plugin_paths.split(os.pathsep))
+            core_config.set('plugin_paths', plugin_paths.split(os.pathsep))
         ext_paths = environ.pop('WA_EXTENSION_PATHS', '')
         if ext_paths:
-            wa_config.set('plugin_paths', ext_paths.split(os.pathsep))
+            core_config.set('plugin_paths', ext_paths.split(os.pathsep))
 
 
 # Command line options are parsed in the "run" command. This is used to send
 # certain arguments to the correct configuration points and keep a record of
 # how WA was invoked
 class CommandLineArgsParser(object):
-    def __init__(self, cmd_args, wa_config, jobs_config):
-        wa_config.set("verbosity", cmd_args.verbosity)
+    def __init__(self, cmd_args, core_config, jobs_config):
+        core_config.set("verbosity", cmd_args.verbosity)
         # TODO: Is this correct? Does there need to be a third output dir param
         disabled_instruments = toggle_set(["~{}".format(i) for i in cmd_args.instruments_to_disable])
         jobs_config.disable_instruments(disabled_instruments)

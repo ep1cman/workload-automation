@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from wlauto.core.configuration.configuration import (settings,
-                                                     WAConfiguration,
+from wlauto.core.configuration.configuration import (core_config,
+                                                     CoreConfiguration,
                                                      RunConfiguration,
                                                      JobGenerator,
                                                      ConfigurationPoint)

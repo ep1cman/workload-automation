@@ -756,7 +756,7 @@ class RunConfiguration(Configuration):
         selected device.
         """
         # pylint: disable=no-member
-        self.device_config = plugin_cache.get_plugin_config(self.device_config,
+        self.device_config = plugin_cache.get_plugin_config(self.device,
                                                             generic_name="device_config")
 
     def to_pod(self):

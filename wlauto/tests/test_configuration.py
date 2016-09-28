@@ -46,7 +46,7 @@ def _construct_mock_plugin_cache(values=None):
         values = deepcopy(DEFAULT_PLUGIN_CONFIG)
 
     plugin_cache = Mock(spec=PluginCache)
-    plugin_cache.sources = ["a", "b", "c", "d", "e"]
+    plugin_cache.sources = xrange(2)
 
     def get_plugin_config(plugin_name, generic_name=None):
         return values[plugin_name]
@@ -402,7 +402,7 @@ class PluginCacheTest(TestCase):
             output[p.name] = p.default
         return output
 
-    def make_mock_cache(self):
+    def make_cache_with_mock_loader(self):
         mock_loader = Mock()
         mock_loader.get_plugin_class.side_effect = self.get_plugin
         mock_loader.list_plugins = Mock(return_value=[self.plugin1, self.plugin2])
@@ -411,7 +411,7 @@ class PluginCacheTest(TestCase):
         return PluginCache(loader=mock_loader)
 
     def test_get_params(self):
-        plugin_cache = self.make_mock_cache()
+        plugin_cache = self.make_cache_with_mock_loader()
 
         expected_params = {
             self.param1.name: self.param1,
@@ -421,7 +421,7 @@ class PluginCacheTest(TestCase):
         assert_equal(expected_params, plugin_cache.get_plugin_parameters("plugin 1"))
 
     def test_global_aliases(self):
-        plugin_cache = self.make_mock_cache()
+        plugin_cache = self.make_cache_with_mock_loader()
 
         # Check the alias map
         expected_map = {
@@ -434,7 +434,6 @@ class PluginCacheTest(TestCase):
             }
         }
         expected_set = set(["test_global_alias", "some_other_alias"])
-
         assert_equal(expected_map, plugin_cache._global_alias_map)
         assert_equal(expected_set, plugin_cache._list_of_global_aliases)
         assert_equal(True, plugin_cache.is_global_alias("test_global_alias"))
@@ -459,7 +458,7 @@ class PluginCacheTest(TestCase):
         assert_equal(expected_aliases, plugin_cache.global_alias_values)
 
     def test_add_config(self):
-        plugin_cache = self.make_mock_cache()
+        plugin_cache = self.make_cache_with_mock_loader()
 
         # Test adding sources
         for x in xrange(5):
@@ -479,7 +478,7 @@ class PluginCacheTest(TestCase):
         assert_equal(expected_plugin_config, plugin_cache.plugin_configs)
 
     def test_get_plugin_config(self):
-        plugin_cache = self.make_mock_cache()
+        plugin_cache = self.make_cache_with_mock_loader()
         for x in xrange(5):
             plugin_cache.add_source(x)
 
@@ -508,7 +507,7 @@ class PluginCacheTest(TestCase):
         assert_equal(expected_config, plugin_cache.get_plugin_config("plugin 1"))
 
     def test_merge_using_priority_specificity(self):
-        plugin_cache = self.make_mock_cache()
+        plugin_cache = self.make_cache_with_mock_loader()
         for x in xrange(5):
             plugin_cache.add_source(x)
 

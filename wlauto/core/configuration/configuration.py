@@ -984,7 +984,7 @@ class JobGenerator(object):
             workload_entries = leaf.workload_entries
             sections = [leaf]
             for ancestor in leaf.ancestors():
-                workload_entries = ancestor.workload_entries + workload_entries
+                workload_entries += ancestor.workload_entries
                 sections.insert(0, ancestor)
 
             # PHASE 2: Create job specs for this leaf

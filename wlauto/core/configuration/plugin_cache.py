@@ -53,6 +53,16 @@ class PluginCache(object):
             raise Exception("Source has already been added.")
         self.sources.append(source)
 
+    def add_configs(self, plugin_name, values, source):
+        if self.is_global_alias(plugin_name):
+            self.add_global_alias(plugin_name, values, source)
+            return
+        if not isinstance(values, dict):
+            msg = "configuration must be either a global alias or a dict of plugin config"
+            raise ConfigError(msg)
+        for name, value in values.iteritems():
+            self.add_config(plugin_name, name, value, source)
+
     def add_global_alias(self, alias, value, source):
         if source not in self.sources:
             msg = "Source '{}' has not been added to the plugin cache."
@@ -63,13 +73,6 @@ class PluginCache(object):
             raise RuntimeError(msg.format(alias))
 
         self.global_alias_values[alias][source] = value
-
-    def add_configs(self, plugin_name, values, source):
-        if self.is_global_alias(plugin_name):
-            self.add_global_alias(plugin_name, values, source)
-            return
-        for name, value in values.iteritems():
-            self.add_config(plugin_name, name, value, source)
 
     def add_config(self, plugin_name, name, value, source):
         if source not in self.sources:

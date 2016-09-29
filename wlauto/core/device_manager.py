@@ -2,14 +2,14 @@ import string
 from copy import copy
 
 from wlauto.core.plugin import Plugin, Parameter
-from wlauto.core.configuration.configuration import RuntimeParameter
 from wlauto.exceptions import ConfigError
 from wlauto.utils.types import list_of_integers, list_of, caseless_string
+from wlauto.core.configuration.configuration_points import RuntimeParameter
 
 from devlib.platform import Platform
 from devlib.target import AndroidTarget, Cpuinfo, KernelVersion, KernelConfig
 
-__all__ = ['RuntimeParameter', 'CoreParameter', 'DeviceManager', 'TargetInfo']
+__all__ = ['DeviceManager', 'TargetInfo']
 
 UNKOWN_RTP = 'Unknown runtime parameter "{}"'
 

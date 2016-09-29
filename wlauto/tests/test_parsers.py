@@ -3,13 +3,12 @@ from unittest import TestCase
 from copy import copy
 
 from nose.tools import assert_equal  # pylint: disable=E0611
-from mock.mock import Mock, MagicMock, call
+from mock.mock import MagicMock
 
 from wlauto.exceptions import ConfigError
-from wlauto.core.configuration.parsers import *  # pylint: disable=wildcard-import
+from wlauto.core.configuration.parsers import *  # pylint: disable=unused-wildcard-import,wildcard-import
 from wlauto.core.configuration.parsers import _load_file, _collect_valid_id, _resolve_params_alias
-from wlauto.core.configuration import (CoreConfiguration, RunConfiguration, JobGenerator,
-                                       PluginCache, ConfigurationPoint)
+from wlauto.core.configuration import CoreConfiguration, RunConfiguration, ConfigurationPoint
 from wlauto.utils.types import toggle_set, reset_counter
 
 
@@ -24,7 +23,8 @@ class TestFunctions(TestCase):
         base_path = os.path.dirname(os.path.realpath(__file__))
 
         # Top level entry not a dict
-        with self.assertRaisesRegexp(ConfigError, r".+ does not contain a valid test file structure; top level must be a dict\."):
+        msg = r".+ does not contain a valid test file structure; top level must be a dict\."
+        with self.assertRaisesRegexp(ConfigError, msg):
             _load_file(os.path.join(base_path, "data", "test-agenda-not-dict.yaml"), "test file")
 
         # Yaml syntax error
@@ -125,7 +125,7 @@ class TestFunctions(TestCase):
         with self.assertRaises(ConfigError):
             _resolve_params_alias(test, "new_name")
 
-    def test_construct_valid_entry(self):
+    def test_construct_valid_entry(self):  # pylint: disable=R0201
         raise Exception()
 
 
@@ -135,7 +135,7 @@ class TestConfigParser(TestCase):
         config_parser = ConfigParser()
 
         # "run_name" can only be in agenda config sections
-        #' and is handled by AgendaParser
+        # and is handled by AgendaParser
         err = 'Error in "Unit test":\n' \
               '"run_name" can only be specified in the config section of an agenda'
         with self.assertRaisesRegexp(ConfigError, err):
@@ -150,7 +150,7 @@ class TestConfigParser(TestCase):
                                 "result_processors": ["~one", "~two", "~three"]},
                                "Unit test")
 
-    def test_config_points(self):
+    def test_config_points(self):  # pylint: disable=R0201
         config_parser = ConfigParser()
 
         cfg = {
@@ -227,7 +227,7 @@ class TestAgendaParser(TestCase):
         _test_bad_type("not_a_valid_entry", "Unit Test", msg)
 
     # Test Phase 3
-    def test_id_collection(self):
+    def test_id_collection(self):  # pylint: disable=R0201
         agenda_parser = AgendaParser()
 
         agenda = {
@@ -249,7 +249,7 @@ class TestAgendaParser(TestCase):
     # Test Phase 4
 
     # Helper functions
-    def _assert_ids(self, ids, expected):
+    def _assert_ids(self, ids, expected):  # pylint: disable=R0201
         ids_set = set(ids)
         assert_equal(len(ids), len(ids_set))
         assert_equal(ids_set, set(expected))
@@ -268,7 +268,7 @@ class TestAgendaParser(TestCase):
         self._assert_ids(sec_ids, set(expected_sect))
         self._reset_counters()
 
-    def _reset_counters(self):
+    def _reset_counters(self):  # pylint: disable=R0201
         reset_counter("wk")
         reset_counter("s")
 
@@ -329,7 +329,7 @@ class TestAgendaParser(TestCase):
         agenda_parser.load(used_auto_id, "Unit Test")
         self._assert_workloads_sections(agenda_parser.jobs_config, [], ["wk1", "wk2", "wk3"])
 
-    def test_string_workload(self):
+    def test_string_workload(self):  # pylint: disable=R0201
         agenda_parser = AgendaParser()
 
         string = {
@@ -345,7 +345,7 @@ class TestAgendaParser(TestCase):
 
 class TestEnvironmentVarsParser(TestCase):
 
-    def test_environmentvarsparser(self):
+    def test_environmentvarsparser(self):  # pylint: disable=R0201
         expected_config = {
             'user_directory': '/testdir',
             'plugin_paths': ['/test', '/some/other/path', '/testy/mc/test/face']
@@ -362,7 +362,7 @@ class TestEnvironmentVarsParser(TestCase):
         env_parser = EnvironmentVarsParser(alt_valid_environ)
         expected_core_config = {
             'user_directory': '/testdir',
-            'plugin_paths': ['/test','/some/other/path','/testy/mc/test/face']
+            'plugin_paths': ['/test', '/some/other/path', '/testy/mc/test/face']
         }
         assert_equal(expected_core_config, env_parser.core_config)
 

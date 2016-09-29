@@ -10,8 +10,8 @@ from wlauto.exceptions import ConfigError
 from wlauto.core.configuration.tree import SectionNode
 from wlauto.core.configuration.configuration import (ConfigurationPoint,
                                                      Configuration,
-                                                     RunConfiguration,
-                                                     get_type_name)
+                                                     RunConfiguration)
+from wlauto.core.configuration.configuration_points import get_type_name
 from wlauto.core.configuration.plugin_cache import PluginCache, GENERIC_CONFIGS
 from wlauto.utils.types import obj_dict
 #       A1

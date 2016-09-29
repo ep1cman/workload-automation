@@ -132,14 +132,7 @@ class TestFunctions(TestCase):
 class TestConfigParser(TestCase):
 
     def test_error_cases(self):
-        core_config = Mock(spec=CoreConfiguration)
-        core_config.configuration = CoreConfiguration.configuration
-        run_config = Mock(spec=RunConfiguration)
-        run_config.configuration = RunConfiguration.configuration
-        config_parser = ConfigParser(core_config,
-                                     run_config,
-                                     Mock(spec=JobGenerator),
-                                     Mock(spec=PluginCache))
+        config_parser = ConfigParser()
 
         # "run_name" can only be in agenda config sections
         #' and is handled by AgendaParser
@@ -158,18 +151,9 @@ class TestConfigParser(TestCase):
                                "Unit test")
 
     def test_config_points(self):
-        core_config = Mock(spec=CoreConfiguration)
-        core_config.configuration = CoreConfiguration.configuration
-
-        run_config = Mock(spec=RunConfiguration)
-        run_config.configuration = RunConfiguration.configuration
-
-        jobs_config = Mock(spec=JobGenerator)
-        plugin_cache = Mock(spec=PluginCache)
-        config_parser = ConfigParser(core_config, run_config, jobs_config, plugin_cache)
+        config_parser = ConfigParser()
 
         cfg = {
-            "assets_repository": "/somewhere/",
             "logging": "verbose",
             "project": "some project",
             "project_stage": "stage 1",
@@ -177,56 +161,56 @@ class TestConfigParser(TestCase):
             "workload_name": "name"
         }
         config_parser.load(cfg, "Unit test")
-        core_config.set.assert_has_calls([
-            call("assets_repository", "/somewhere/"),
-            call("logging", "verbose")
-        ], any_order=True)
-        run_config.set.assert_has_calls([
-            call("project", "some project"),
-            call("project_stage", "stage 1")
-        ], any_order=True)
-        jobs_config.set_global_value.assert_has_calls([
-            call("iterations", 9001),
-            call("workload_name", "name"),
-            call("instrumentation", toggle_set())
-        ], any_order=True)
+
+        expected_core_config = {
+            "Unit test": {
+                "logging": "verbose"
+            }
+        }
+        expected_run_config = {
+            "Unit test": {
+                "project": "some project",
+                "project_stage": "stage 1"
+            }
+        }
+        expected_jobs_config = {
+            "Unit test": {
+                "iterations": 9001,
+                "workload_name": "name",
+                "instrumentation": toggle_set()
+            }
+        }
+        assert_equal(expected_core_config, config_parser.core_config)
+        assert_equal(expected_run_config, config_parser.run_config)
+        assert_equal(expected_jobs_config, config_parser.jobs_config)
 
         # Test setting global instruments including a non-conflicting duplicate ("two")
-        jobs_config.reset_mock()
+        config_parser.jobs_config.clear()
         instruments_and_result_processors = {
             "instruments": ["one", "two"],
             "result_processors": ["two", "three"]
         }
         config_parser.load(instruments_and_result_processors, "Unit test")
-        jobs_config.set_global_value.assert_has_calls([
-            call("instrumentation", toggle_set(["one", "two", "three"]))
-        ], any_order=True)
-
-        # Testing a empty config
-        jobs_config.reset_mock()
-        config_parser.load({}, "Unit test")
-        jobs_config.set_global_value.assert_has_calls([], any_order=True)
-        core_config.set.assert_has_calls([], any_order=True)
-        run_config.set.assert_has_calls([], any_order=True)
+        expected_jobs_config = {
+            "Unit test": {
+                "instrumentation": toggle_set(["one", "two", "three"])
+            }
+        }
+        assert_equal(expected_jobs_config, config_parser.jobs_config)
 
 
 class TestAgendaParser(TestCase):
 
     # Tests Phase 1 & 2
     def test_valid_structures(self):
-        core_config = Mock(spec=CoreConfiguration)
-        core_config.configuration = CoreConfiguration.configuration
-        run_config = Mock(spec=RunConfiguration)
-        run_config.configuration = RunConfiguration.configuration
-        jobs_config = Mock(spec=JobGenerator)
-        plugin_cache = Mock(spec=PluginCache)
-        agenda_parser = AgendaParser(core_config, run_config, jobs_config, plugin_cache)
+        agenda_parser = AgendaParser()
 
         msg = 'Error in "Unit Test":\n\tInvalid agenda, top level entry must be a dict'
         with self.assertRaisesRegexp(ConfigError, msg):
             agenda_parser.load(123, "Unit Test")
 
         def _test_bad_type(name, source, msg):
+            agenda_parser.source = None
             error_msg = msg.format(source=source, name=name)
             with self.assertRaisesRegexp(ConfigError, error_msg):
                 agenda_parser.load({name: 123}, source)
@@ -244,13 +228,7 @@ class TestAgendaParser(TestCase):
 
     # Test Phase 3
     def test_id_collection(self):
-        core_config = Mock(spec=CoreConfiguration)
-        core_config.configuration = CoreConfiguration.configuration
-        run_config = Mock(spec=RunConfiguration)
-        run_config.configuration = RunConfiguration.configuration
-        jobs_config = Mock(spec=JobGenerator)
-        plugin_cache = Mock(spec=PluginCache)
-        agenda_parser = AgendaParser(core_config, run_config, jobs_config, plugin_cache)
+        agenda_parser = AgendaParser()
 
         agenda = {
             "workloads": [
@@ -269,38 +247,34 @@ class TestAgendaParser(TestCase):
         assert_equal(workloads, set(["test1", "test2", "section1_workload"]))
 
     # Test Phase 4
-    def test_id_assignment(self):
-        core_config = Mock(spec=CoreConfiguration)
-        core_config.configuration = CoreConfiguration.configuration
-        run_config = Mock(spec=RunConfiguration)
-        run_config.configuration = RunConfiguration.configuration
-        jobs_config = Mock(spec=JobGenerator)
-        plugin_cache = Mock(spec=PluginCache)
-        agenda_parser = AgendaParser(core_config, run_config, jobs_config, plugin_cache)
 
-        # Helper function
-        def _assert_ids(ids, expected):
-            ids_set = set(ids)
-            assert_equal(len(ids), len(ids_set))
-            assert_equal(ids_set, set(expected))
+    # Helper functions
+    def _assert_ids(self, ids, expected):
+        ids_set = set(ids)
+        assert_equal(len(ids), len(ids_set))
+        assert_equal(ids_set, set(expected))
 
-        def _assert_workloads_sections(jobs_config, expected_sect, expected_wk):
-            wk_ids = [wk[0][0]['id'] for wk in jobs_config.add_workload.call_args_list]
-            # section workloads
-            for s in jobs_config.add_section.call_args_list:
-                wk_ids += [wk['id'] for wk in s[0][1]]
-            #sections
-            sec_ids = set([s[0][0]['id'] for s in jobs_config.add_section.call_args_list])
-            _assert_ids(wk_ids, set(expected_wk))
-            _assert_ids(sec_ids, set(expected_sect))
-            _reset_jobs_config(jobs_config)
+    def _assert_workloads_sections(self, jobs_config, expected_sect, expected_wk):
+        # Global workloads
+        wk_ids = [wk['id'] for wk in jobs_config["workloads"]]
 
-        def _reset_jobs_config(jobs_config):
-            jobs_config.reset_mock()
-            reset_counter("wk")
-            reset_counter("s")
+        # Section workloads
+        for _, wks in jobs_config['sections']:
+            wk_ids += [wk['id'] for wk in wks]
 
-        # Test auto id assignment
+        # Sections
+        sec_ids = [s['id'] for s, _ in jobs_config['sections']]
+        self._assert_ids(wk_ids, set(expected_wk))
+        self._assert_ids(sec_ids, set(expected_sect))
+        self._reset_counters()
+
+    def _reset_counters(self):
+        reset_counter("wk")
+        reset_counter("s")
+
+    def test_no_ids_provided(self):
+        agenda_parser = AgendaParser()
+
         auto_id = {
             "workloads": [
                 {"name": 1},
@@ -319,10 +293,12 @@ class TestAgendaParser(TestCase):
             ]
         }
         agenda_parser.load(auto_id, "Unit Test")
-        _assert_workloads_sections(jobs_config, ["s1", "s2", "s3"],
-                                   ["wk1", "wk2", "wk3", "wk4", "wk5", "wk6"])
+        self._assert_workloads_sections(agenda_parser.jobs_config, ["s1", "s2", "s3"],
+                                        ["wk1", "wk2", "wk3", "wk4", "wk5", "wk6"])
 
-        # Test user defined IDs
+    def test_some_user_provided_ids(self):
+        agenda_parser = AgendaParser()
+
         user_ids = {
             "workloads": [
                 {"id": "user1"},
@@ -336,10 +312,13 @@ class TestAgendaParser(TestCase):
             ]
         }
         agenda_parser.load(user_ids, "Unit Test")
-        _assert_workloads_sections(jobs_config, ["user_section1"],
-                                   ["user1", "wk1", "wk2"])
+        self._assert_workloads_sections(agenda_parser.jobs_config, ["user_section1"],
+                                        ["user1", "wk1", "wk2"])
 
-        # Test auto asigned ID already present
+    # Test auto asigned ID already present
+    def test_conflicting_ids(self):
+        agenda_parser = AgendaParser()
+
         used_auto_id = {
             "workloads": [
                 {"id": "wk2"},
@@ -348,16 +327,18 @@ class TestAgendaParser(TestCase):
             ],
         }
         agenda_parser.load(used_auto_id, "Unit Test")
-        _assert_workloads_sections(jobs_config, [], ["wk1", "wk2", "wk3"])
+        self._assert_workloads_sections(agenda_parser.jobs_config, [], ["wk1", "wk2", "wk3"])
 
-        # Test string workload
+    def test_string_workload(self):
+        agenda_parser = AgendaParser()
+
         string = {
             "workloads": [
                 "test"
             ]
         }
         agenda_parser.load(string, "Unit Test")
-        workload = jobs_config.add_workload.call_args_list[0][0][0]
+        workload = agenda_parser.jobs_config['workloads'][0]
         assert_equal(isinstance(workload, dict), True)
         assert_equal(workload['workload_name'], "test")
 
@@ -365,47 +346,32 @@ class TestAgendaParser(TestCase):
 class TestEnvironmentVarsParser(TestCase):
 
     def test_environmentvarsparser(self):
-        core_config = Mock(spec=CoreConfiguration)
-        calls = [call('user_directory', '/testdir'),
-                 call('plugin_paths', ['/test', '/some/other/path', '/testy/mc/test/face'])]
-
+        expected_config = {
+            'user_directory': '/testdir',
+            'plugin_paths': ['/test', '/some/other/path', '/testy/mc/test/face']
+        }
         # Valid env vars
-        valid_environ = {"WA_USER_DIRECTORY": "/testdir",
-                         "WA_PLUGIN_PATHS": "/test:/some/other/path:/testy/mc/test/face"}
-        EnvironmentVarsParser(core_config, valid_environ)
-        core_config.set.assert_has_calls(calls)
+        valid_environ = {'WA_USER_DIRECTORY': '/testdir',
+                         'WA_PLUGIN_PATHS': '/test:/some/other/path:/testy/mc/test/face'}
+        env_parser = EnvironmentVarsParser(valid_environ)
+        assert_equal(expected_config, env_parser.core_config)
 
         # Alternative env var name
-        core_config.reset_mock()
-        alt_valid_environ = {"WA_USER_DIRECTORY": "/testdir",
-                             "WA_EXTENSION_PATHS": "/test:/some/other/path:/testy/mc/test/face"}
-        EnvironmentVarsParser(core_config, alt_valid_environ)
-        core_config.set.assert_has_calls(calls)
-
-        # Test that WA_EXTENSION_PATHS gets merged with WA_PLUGIN_PATHS.
-        # Also checks that other enviroment variables don't cause errors
-        core_config.reset_mock()
-        calls = [call('user_directory', '/testdir'),
-                 call('plugin_paths', ['/test', '/some/other/path']),
-                 call('plugin_paths', ['/testy/mc/test/face'])]
-        ext_and_plgin = {"WA_USER_DIRECTORY": "/testdir",
-                         "WA_PLUGIN_PATHS": "/test:/some/other/path",
-                         "WA_EXTENSION_PATHS": "/testy/mc/test/face",
-                         "RANDOM_VAR": "random_value"}
-        EnvironmentVarsParser(core_config, ext_and_plgin)
-        # If any_order=True then the calls can be in any order, but they must all appear
-        core_config.set.assert_has_calls(calls, any_order=True)
+        alt_valid_environ = {'WA_USER_DIRECTORY': '/testdir',
+                             'WA_EXTENSION_PATHS': '/test:/some/other/path:/testy/mc/test/face'}
+        env_parser = EnvironmentVarsParser(alt_valid_environ)
+        expected_core_config = {
+            'user_directory': '/testdir',
+            'plugin_paths': ['/test','/some/other/path','/testy/mc/test/face']
+        }
+        assert_equal(expected_core_config, env_parser.core_config)
 
         # No WA enviroment variables present
-        core_config.reset_mock()
-        EnvironmentVarsParser(core_config, {"RANDOM_VAR": "random_value"})
-        core_config.set.assert_not_called()
+        env_parser = EnvironmentVarsParser({'RANDOM_VAR': 'random_value'})
+        assert_equal({}, env_parser.core_config)
 
 
 class TestCommandLineArgsParser(TestCase):
-    core_config = Mock(spec=CoreConfiguration)
-    run_config = Mock(spec=RunConfiguration)
-    jobs_config = Mock(spec=JobGenerator)
 
     cmd_args = MagicMock(
         verbosity=1,
@@ -414,9 +380,11 @@ class TestCommandLineArgsParser(TestCase):
         only_run_ids=["wk1", "s1_wk4"],
         some_other_setting="value123"
     )
-    CommandLineArgsParser(cmd_args, core_config, jobs_config)
-    core_config.set.assert_has_calls([call("verbosity", 1)], any_order=True)
-    jobs_config.disable_instruments.assert_has_calls([
-        call(toggle_set(["~abc", "~def", "~ghi"]))
-    ], any_order=True)
-    jobs_config.only_run_ids.assert_has_calls([call(["wk1", "s1_wk4"])], any_order=True)
+    command_parser = CommandLineArgsParser(cmd_args)
+    expected_core_config = {"verbosity": 1}
+    expected_jobs_config = {
+        "disabled_instruments": toggle_set(["~abc", "~def", "~ghi"]),
+        "only_run_ids": ["wk1", "s1_wk4"]
+    }
+    assert_equal(expected_core_config, command_parser.core_config)
+    assert_equal(expected_jobs_config, command_parser.jobs_config)

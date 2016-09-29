@@ -133,6 +133,7 @@ class Configuration(object):
 
     config_points = []
     name = ""
+    parser_attribute_name = None
     # The below line must be added to all subclasses
     configuration = {cp.name: cp for cp in config_points}
 
@@ -175,11 +176,23 @@ class Configuration(object):
         instance.validate()
         return instance
 
+    def fetch_config(self, sources, *args):
+        for source in sources:
+            for parser in args:
+                parser_value = getattr(parser, self.parser_attribute_name)
+                if source not in parser_value:
+                    continue
+                for name, cfg_point in self.configuration.iteritems():
+                    if name not in parser_value[source]:
+                        continue
+                    cfg_point.set_value(self, value=parser_value[source][name])
+
 
 # This configuration for the core WA framework
 class CoreConfiguration(Configuration):
 
     name = "WA Configuration"
+    parser_attribute_name = "core_config"
     config_points = [
         ConfigurationPoint(
             'user_directory',
@@ -277,6 +290,7 @@ class CoreConfiguration(Configuration):
 class RunConfiguration(Configuration):
 
     name = "Run Configuration"
+    parser_attribute_name = 'run_config'
 
     # Metadata is separated out because it is not loaded into the auto generated config file
     meta_data = [
@@ -564,6 +578,7 @@ class JobSpec(Configuration):
 class JobGenerator(object):
 
     name = "Jobs Configuration"
+    parser_attribute_name = "jobs_config"
 
     @property
     def enabled_instruments(self):

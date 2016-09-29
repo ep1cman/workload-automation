@@ -10,6 +10,7 @@ from wlauto.exceptions import ConfigError
 from wlauto.core.configuration.tree import SectionNode
 from wlauto.core.configuration.configuration import (ConfigurationPoint,
                                                      Configuration,
+                                                     CoreConfiguration,
                                                      RunConfiguration)
 from wlauto.core.configuration.configuration_points import get_type_name
 from wlauto.core.configuration.plugin_cache import PluginCache, GENERIC_CONFIGS
@@ -357,6 +358,58 @@ class ConfigurationTest(TestCase):
 
     def test_generate_job_spec(self):
         pass
+
+    def test_fetch_core_config(self):
+        cfg_parser = Mock()
+        cfg_parser.core_config = {
+                '1': {
+                    'verbosity': 1,
+                    'default_output_directory': 'output'
+                },
+                '2': {
+                    'verbosity': 3,
+                    'default_output_directory': 'folder'
+                }
+            }
+        env_parser = Mock()
+        env_parser.core_config = {
+                'a': {
+                    'user_directory': "home",
+                },
+                'b': {
+                    'plugin_paths': ['hi', 'hello'],
+                    'plugin_ignore_paths': ['qwe', 'eqw']
+                }
+            }
+        cmd_parser = Mock()
+        cmd_parser.core_config = {
+                'c': {
+                    'plugin_packages': ['asd', 'das']
+                }
+            }
+
+        cfg = CoreConfiguration()
+        cfg.parser_attribute_name = 'core_config'
+        sources = ['a', 'b', '1', '2', 'c']
+        cfg.fetch_config(sources, cfg_parser, env_parser, cmd_parser)
+
+        expected_config = {
+            'verbosity': 3,
+            'default_output_directory': 'folder',
+            'user_directory': 'home',
+            'plugin_paths': ['workloads',
+                             'instruments',
+                             'targets',
+                             'processors',
+                             'managers',
+                             'result_processors',
+                             'hi',
+                             'hello'],
+            'plugin_ignore_paths': ["qwe", "eqw"],
+            'plugin_packages': ['asd', 'das']
+        }
+        for key, value in expected_config.iteritems():
+            assert_equal(getattr(cfg, key), value)
 
 
 class PluginCacheTest(TestCase):

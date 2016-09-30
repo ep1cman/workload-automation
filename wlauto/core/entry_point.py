@@ -22,6 +22,8 @@ import subprocess
 import warnings
 
 from wlauto.core.configuration import core_config
+from wlauto.core.configuration.parsers import ParserManager
+from wlauto.core.configuration.configuration import core_config
 from wlauto.core import pluginloader
 from wlauto.core.command import init_argument_parser
 from wlauto.exceptions import WAError, ConfigError
@@ -32,8 +34,6 @@ from wlauto.utils.doc import format_body
 from devlib import DevlibError
 
 warnings.filterwarnings(action='ignore', category=UserWarning, module='zope')
-
-
 logger = logging.getLogger('command_line')
 
 
@@ -54,21 +54,33 @@ def main():
                                          formatter_class=argparse.RawDescriptionHelpFormatter,
                                          )
         init_argument_parser(parser)
-        commands = load_commands(parser.add_subparsers(dest='command'))  # each command will add its own subparser
         args = parser.parse_args()
 
-        #TODO: Set this stuff properly, i.e dont use settings (if possible)
-        #settings.set("verbosity", args.verbose)
-        #settings.load_user_config()
-        #settings.debug = args.debug
+        parser_manager = ParserManager()
+        parser_manager.load_environment_vars(os.environ)
+        try:
+            for config in args.config:
+                parser_manager.load_config_file(config)
+        except ConfigError as e:
+            raise ConfigError("Config file '{}' already specified".format(str(e)))
+        parser_manager.load_command_line_args(args)
 
+        core_config.fetch_config(parser_manager)
+
+        init_logging()
+
+        pluginloader.update(core_config.plugin_packages,
+                            core_config.plugin_paths,
+                            core_config.plugin_ignore_paths)
+
+        commands = load_commands(parser.add_subparsers(dest='command'))  # each command will add its own subparser
+
+        # Check that all config files exist
         for config in args.config:
             if not os.path.exists(config):
                 raise ConfigError("Config file {} not found".format(config))
 
-        init_logging(settings.verbosity)
-
-        command = commands[args.command]
+                command = commands[args.command]
         sys.exit(command.execute(args))
 
     except KeyboardInterrupt:

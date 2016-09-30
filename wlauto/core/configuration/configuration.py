@@ -176,9 +176,9 @@ class Configuration(object):
         instance.validate()
         return instance
 
-    def fetch_config(self, sources, *args):
-        for source in sources:
-            for parser in args:
+    def fetch_config(self, parser_manager):
+        for source in parser_manager.sources:
+            for parser in parser_manager.parsers:
                 parser_value = getattr(parser, self.parser_attribute_name)
                 if source not in parser_value:
                     continue

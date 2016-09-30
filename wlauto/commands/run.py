@@ -22,7 +22,8 @@ import wlauto
 from wlauto import Command, settings
 from wlauto.core.execution import Executor
 from wlauto.utils.log import add_log_file
-from wlauto.core.configuration import RunConfiguration, WAConfiguration
+from wlauto.core.configuration import core_config, RunConfiguration, JobGenerator, PluginCache
+from wlauto.core.configuration.parsers import EnvironmentVarsParser, CommandLineArgsParser, AgendaParser, ConfigParser
 from wlauto.core import pluginloader
 from wlauto.core.configuration_parsers import Agenda, ConfigFile, EnvrironmentVars, CommandLineArgs
 
@@ -72,56 +73,23 @@ class RunCommand(Command):
 
     def execute(self, args):
 
-        # STAGE 1: Gather configuratation
+        # Set logging verbosity
+        cmd_parse = CommandLineArgsParser()
+        cmd_parse.parse_verbosity(args, wa_config)
 
-        env = EnvrironmentVars()
-        args = CommandLineArgs(args)
+        # verbosity is parsed and set in entry_point
 
-        # STAGE 2.1a: Early WAConfiguration, required to find config files
-        if env.user_directory:
-            settings.set("user_directory", env.user_directory)
-        if env.plugin_paths:
-            settings.set("plugin_paths", env.plugin_paths)
-        # STAGE 1 continued
+        # Parse enviroment variables
+        EnvironmentVarsParser(core_config, os.environ)
 
-        # TODO: Check for config.py and convert to yaml, if it fails, warn user.
-        configs = [ConfigFile(os.path.join(settings.user_directory, 'config.yaml'))]
-        for c in args.config:
-            configs.append(ConfigFile(c))
-        agenda = Agenda(args.agenda)
-        configs.append(Agenda.config)
+        pluginloader.reset(core_config.plugin_packages,
+                           core_config.plugin_paths,
+                           core_config.plugin_ignore_paths)
+        plugin_cache = PluginCache()
 
-        # STAGE 2: Sending configuration to the correct place & merging in
-        #          order of priority.
-        #
-        #          Priorities (lowest to highest):
-        #           - Enviroment Variables
-        #           - config.yaml from `user_directory`
-        #           - config files passed via command line
-        #             (the first specified will be the first to be applied)
-        #           - Agenda
-        #           - Command line configuration e.g. disabled instrumentation.
+        job_generator = JobGenerator(plugin_cache)
+        run_config = RunConfiguration()
 
-        # STAGE 2.1b: WAConfiguration
-        for config in configs:
-            for config_point in settings.configuration.keys():
-                if hasattr(config, config_point):
-                    settings.set(config_point, config.getattr(config_point))
-
-
-    def _parse_config(self):
-        pass
-
-    def _serialize_raw_config(self, env, args, agenda, configs):
-        pod = {}
-        pod['environment_variables'] = env.to_pod()
-        pod['commandline_arguments'] = args.to_pod()
-        pod['agenda'] = agenda.to_pod()
-        pod['config_files'] = [c.to_pod() for c in configs]
-        return pod
-
-    def _serialize_final_config(self):
-        pass
 
 
 class OldRunCommand(Command):

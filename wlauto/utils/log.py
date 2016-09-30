@@ -36,7 +36,8 @@ COLOR_MAP = {
 RESET_COLOR = colorama.Style.RESET_ALL
 
 
-def init_logging(verbosity):
+def init_logging():
+    verbosity = core_config.verbosity
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.DEBUG)
 

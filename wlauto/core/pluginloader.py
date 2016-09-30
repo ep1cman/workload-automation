@@ -32,14 +32,13 @@ class __LoaderWrapper(object):
     def __init__(self):
         self._loader = None
 
-    def reset(self):
+    def reset(self, plugin_packages, plugin_paths, plugin_ignore_paths):
         # These imports cannot be done at top level, because of
         # sys.modules manipulation below
         from wlauto.core.plugin import PluginLoader
-        from wlauto.core.configuration import core_config
-        self._loader = PluginLoader(settings.plugin_packages,
-                                    settings.plugin_paths,
-                                    settings.plugin_ignore_paths)
+        self._loader = PluginLoader(plugin_packages,
+                                    plugin_paths,
+                                    plugin_ignore_paths)
 
     def update(self, packages=None, paths=None, ignore_paths=None):
         if not self._loader:

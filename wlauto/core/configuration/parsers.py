@@ -159,6 +159,51 @@ def _process_workload_entry(workload, seen_workload_ids):
 ### Parsers ###
 ###############
 
+ENV_VAR_SOURCE = 'env_vars'
+CMD_ARGS_SOURCE = 'cmd_args'
+
+class ParserManager(object):
+
+    error_msg = 'Source "{}" has already been loaded.'
+
+    @property
+    def sources(self):
+        source_list = [ENV_VAR_SOURCE]
+        source_list += self.config_files
+        if self.agenda_file is not None:
+            source_list.append(self.agenda_file)
+        source_list.append(CMD_ARGS_SOURCE)
+        return source_list
+
+    def __init__(self):
+        self.cfg_parser = ConfigParser()
+        self.env_parser = EnvironmentVarsParser()
+        self.cmd_parser = CommandLineArgsParser()
+        self.agenda_parser = AgendaParser()
+        self.parsers = [self.cfg_parser,
+                        self.env_parser,
+                        self.cmd_parser,
+                        self.agenda_parser]
+        self.config_files = []
+        self.agenda_file = None
+
+    def load_config_file(self, filepath):
+        if filepath in self.config_files:
+            raise ConfigError(filepath)
+        self.config_files.append(filepath)
+        self.cfg_parser.load_from_path(filepath)
+
+    def load_environment_vars(self, environ):
+        self.env_parser.load(environ)
+
+    def load_command_line_args(self, cmd_args):
+        self.cmd_parser.load(cmd_args)
+
+    def load_agenda_file(self, filepath):
+        if self.agenda_file is not None:
+            raise RuntimeError(self.error_msg.format(filepath))
+        self.agenda_parser.load_from_path(filepath)
+
 
 class ConfigParser(object):
 
@@ -238,6 +283,10 @@ class AgendaParser(object):
                     raise ConfigError('Invalid entry "{}" - must be a dict'.format(name))
                 if 'run_name' in entry:
                     self.run_config[source]['run_name'] = entry.pop('run_name')
+                for cfg_point in CoreConfiguration.configuration:
+                    if cfg_point in entry:
+                        msg = '"{}" cannot be specified in the config section of the agenda'
+                        raise ConfigError(msg.format(cfg_point))
                 self.config_section.load(entry, source, wrap_exceptions=False)
 
             # PHASE 2: Getting "section" and "workload" entries.
@@ -286,29 +335,33 @@ class AgendaParser(object):
 
 
 class EnvironmentVarsParser(object):
-    def __init__(self, environ):
-        self.core_config = {}
+    def __init__(self):
+        self.core_config = defaultdict(dict)
+
+    def load(self, environ):
         user_directory = environ.pop('WA_USER_DIRECTORY', '')
         if user_directory:
-            self.core_config['user_directory'] = user_directory
+            self.core_config[ENV_VAR_SOURCE]['user_directory'] = user_directory
 
         plugin_paths = environ.pop('WA_PLUGIN_PATHS', '')
         if plugin_paths:
-            self.core_config['plugin_paths'] = plugin_paths.split(os.pathsep)
+            self.core_config[ENV_VAR_SOURCE]['plugin_paths'] = plugin_paths.split(os.pathsep)
 
         ext_paths = environ.pop('WA_EXTENSION_PATHS', '')
         if ext_paths:
-            self.core_config['plugin_paths'] = ext_paths.split(os.pathsep)
+            self.core_config[ENV_VAR_SOURCE]['plugin_paths'] = ext_paths.split(os.pathsep)
 
 
 # Command line options are parsed in the "run" command. This is used to send
 # certain arguments to the correct configuration points and keep a record of
 # how WA was invoked
 class CommandLineArgsParser(object):
-    def __init__(self, cmd_args):
-        self.core_config = {}
-        self.jobs_config = {}
-        self.core_config["verbosity"] = cmd_args.verbosity
+    def __init__(self):
+        self.core_config = defaultdict(dict)
+        self.jobs_config = defaultdict(dict)
+
+    def load(self, cmd_args):
+        self.core_config[CMD_ARGS_SOURCE]["verbosity"] = cmd_args.verbosity
         disabled_instruments = toggle_set(["~{}".format(i) for i in cmd_args.instruments_to_disable])
-        self.jobs_config["disabled_instruments"] = disabled_instruments
-        self.jobs_config["only_run_ids"] = cmd_args.only_run_ids
+        self.jobs_config[CMD_ARGS_SOURCE]["disabled_instruments"] = disabled_instruments
+        self.jobs_config[CMD_ARGS_SOURCE]["only_run_ids"] = cmd_args.only_run_ids

@@ -360,6 +360,7 @@ class ConfigurationTest(TestCase):
         pass
 
     def test_fetch_core_config(self):
+
         cfg_parser = Mock()
         cfg_parser.core_config = {
                 '1': {
@@ -388,10 +389,12 @@ class ConfigurationTest(TestCase):
                 }
             }
 
+        parser_manager = Mock()
+        parser_manager.sources = ['a', 'b', '1', '2', 'c']
+        parser_manager.parsers = [cfg_parser, env_parser, cmd_parser]
+
         cfg = CoreConfiguration()
-        cfg.parser_attribute_name = 'core_config'
-        sources = ['a', 'b', '1', '2', 'c']
-        cfg.fetch_config(sources, cfg_parser, env_parser, cmd_parser)
+        cfg.fetch_config(parser_manager)
 
         expected_config = {
             'verbosity': 3,
